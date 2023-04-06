@@ -92,6 +92,13 @@ CUDA_VISIBLE_DEVICES=0 deepspeed finetuning_lora.py --num_train_epochs 5 --train
 - 模型训练时，最大长度为768，Batch大小为2，训练轮数为5，fp16训练，采用DeepSpeed的Zero-1训练；
 - PT为官方的P-Tuning V2训练方法，PT-Only-Embedding表示仅对Embedding进行soft-prompt，Freeze仅训练模型后五层参数，Lora采用低秩矩阵方法训练，秩为8；
 - 由于之间训练PT在48G-A40显卡上会出现OOM，因此下面PT实验对模型开启了gradient_checkpointing_enable()，使得模型显存占用变小，但训练时长增加。
+- 训练示例：
+```
+prompt_text：你现在是一个信息抽取模型，请你帮我抽取出关系内容为\"性能故障\", \"部件故障\", \"组成\"和 \"检测工具\"的相关三元组，三元组内部用\"_\"连接，三元组之间用\\n分割。文本：
+输入："故障现象：发动机水温高，风扇始终是低速转动，高速档不工作，开空调尤其如此。
+输出：发动机_部件故障_水温高\n风扇_部件故障_低速转动
+```
+
 
 | 微调方法 |  PT-Only-Embedding |  PT | Freeze |  Lora | 
 | ------- | ------ | ------  | ------ | ------ |
