@@ -76,12 +76,15 @@ model = get_peft_model(model, config)
 训练代码均采用DeepSpeed进行训练，可设置参数包含train_path、model_dir、num_train_epochs、train_batch_size、gradient_accumulation_steps、output_dir、prompt_text、lora_r等，
 可根据自己的任务配置。
 ```
-CUDA_VISIBLE_DEVICES=0 deepspeed finetuning_pt.py --num_train_epochs 5 --train_batch_size 2 --lora_r 8
+CUDA_VISIBLE_DEVICES=0 deepspeed finetuning_lora.py --num_train_epochs 5 --train_batch_size 2 --lora_r 8
 ```
 三元组抽取的推理代码，见predict_lora.py，其他任务可以根据自己的评价标准进行推理预测。
 
 注意：对于结果需要保持一致的任务，需要保存模型的adapter_config.json文件中，inference_mode参数修改成false，并将模型执行model.eval()操作。
 主要原因是chatglm模型代码中，没有采用Conv1D函数。
+
+### 运行环境
+查看requirements.txt文件
 
 ## 实验结果
 ### 三元组抽取
