@@ -8,6 +8,7 @@
 
 由于官方模型和代码一直再更新，请使用项目中的代码，对应版本模型见[百度网盘](https://pan.baidu.com/s/1-UrZWnqw6Ciyo5K2NLraDg)，提取码：jh0l
 
+- update-2023.06.12 [**增加流水线并行训练方法**](https://zhuanlan.zhihu.com/p/636488690)
 - update-2023.04.18 **增加文本生成任务评测**
 - update-2023.04.05 **增加信息抽取任务评测**
 
@@ -171,7 +172,22 @@ CUDA_VISIBLE_DEVICES=0 nohup deepspeed --master_port 5555 finetuning_freeze.py -
 | 分数 | 51.75 | 73.75 | 87.75 | 79.25 | 86.75 |
 
 
-
-
 ### 文本分类
 待补充
+
+## 流水线并行训练
+代码说明见：[大模型流水线并行（Pipeline）实战](https://zhuanlan.zhihu.com/p/636488690)
+
+模型训练详细代码见Github中train_pipeline.py文件。 训练脚本：
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 5524 train_pipeline.py --train_path data/spo_0.json --model_name_or_path ./ChatGLM-6B/ --per_device_train_batch_size 14 --max_len 1024 --max_src_len 512 --num_train_epochs 5 --gradient_accumulation_steps 1 --seed 1234 --show_loss_step 20 --num_stages 4 --save_model_step 100 --output_dir ./output-glm-pp
+```
+模型转换详细代码见Github中convert_model_to_hf.py文件。模型转换脚本：
+```
+python3 convert_model_to_hf.py --ori_model_dir ./ChatGLM-6B/ --pipeline_model_dir output-glm-pp/global_step300/ --save_model_dir output-glm-pp/gs300/
+```
+| 步数 |  100 |  200 | 300 |  400 |  500 | 
+| ------- | ------ | ------  | ------ | ------ | ------ |
+| F1值 | 0.4931 | 0.5132 | 0.5882 | 0.5793 | 0.5874 |
+
+相比于之前其他微调方法（PT、Freeze、Lora等）来说，全量参数微调效果并不是最好，可能由于数据量不足导致。
