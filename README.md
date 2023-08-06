@@ -533,3 +533,6 @@ PS：ChatGLM微调时所用显存要比ChatGLM2多，详细显存占比如下：
 代码说明见：[大模型流水线并行（Pipeline）实战](https://zhuanlan.zhihu.com/p/636488690)
 
 请看[v0.1 Tag](https://github.com/liucongg/ChatGLM-Finetuning/tree/v0.1)
+
+## Star History
+![Star History Chart](https://api.star-history.com/svg?repos=liucongg/ChatGLM-Finetuning&type=Date)
