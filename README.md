@@ -16,6 +16,8 @@ PS：没有用Trainer（虽然Trainer代码简单，但不易修改，大模型�
 
 ## 微调方法
 模型微调时，如果遇到显存不够的情况，可以开启gradient_checkpointing、zero3、offload等参数来节省显存。
+
+下面model_name_or_path参数为模型路径，请根据可根据自己实际模型保存地址进行修改。
 ### Freeze方法
 Freeze方法，即参数冻结，对原始模型部分参数进行冻结操作，仅训练部分参数，以达到在单卡或多卡，不进行TP或PP操作就可以对大模型进行训练。
 
@@ -137,6 +139,7 @@ PT方法，即P-Tuning方法，参考[ChatGLM官方代码](https://github.com/TH
 ![](images/PT.png)
 - P-Tuning仅对大模型的Embedding加入新的参数。[paper](https://arxiv.org/abs/2103.10385)
 - P-Tuning-V2，将大模型的Embedding和每一层前都加上新的参数。[paper](https://arxiv.org/abs/2110.07602)
+
 微调代码，见train.py，核心部分如下：
 ```python3
 config = MODE[args.mode]["config"].from_pretrained(args.model_name_or_path)
