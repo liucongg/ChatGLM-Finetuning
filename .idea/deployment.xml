@@ -23,20 +23,6 @@
           </mappings>
         </serverdata>
       </paths>
-      <paths name="root@192.168.1.205:5656">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="root@192.168.1.205:5656 (1)">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
     </serverData>
   </component>
 </project>
