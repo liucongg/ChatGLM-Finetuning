@@ -120,7 +120,7 @@ class DataCollator(object):
 
     def __call__(self, batch):
         lengths = [len(instance["input_ids"]) for instance in batch]
-        batch_max_len = max(max(lengths), 1560)
+        batch_max_len = max(lengths)
 
         input_ids_batch, labels_batch = [], []
         for instance in batch:
