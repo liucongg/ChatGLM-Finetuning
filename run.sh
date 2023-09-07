@@ -1,0 +1,19 @@
+CUDA_VISIBLE_DEVICES=0 deepspeed --master_port 520 train.py \
+                --train_path data/spo_0.json \
+                --model_name_or_path /home/workspace/from_pretrained/chatglm2-6b \
+                --per_device_train_batch_size 8 \
+                --max_len 1560 \
+                --max_src_len 1024 \
+                --learning_rate 1e-4 \
+                --weight_decay 0.1 \
+                --num_train_epochs 10 \
+                --gradient_accumulation_steps 4 \
+                --warmup_ratio 0.1 \
+                --mode glm2 \
+                --train_type ptuning \
+                --seed 1234 \
+                --ds_file ds_zero2_no_offload.json \
+                --show_loss_step 10 \
+                --pre_seq_len 16 \
+                --prefix_projection True \
+                --output_dir ./output-glm2
