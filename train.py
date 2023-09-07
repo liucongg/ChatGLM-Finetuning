@@ -21,7 +21,6 @@ from utils import print_trainable_parameters, print_rank_0, to_device, set_rando
 from utils import DataCollator
 from peft import LoraConfig, get_peft_model
 from model import MODE
-
 try:
     from torch.utils.tensorboard import SummaryWriter
 except ImportError:
@@ -156,6 +155,7 @@ def main():
     ds_config["scheduler"]["params"]["warmup_num_steps"] = num_warmup_steps
     ds_config["scheduler"]["params"]["warmup_max_lr"] = args.learning_rate
     ds_config["scheduler"]["params"]["warmup_min_lr"] = args.learning_rate * 0.1
+    ds_config["steps_per_print"]=1e9
 
     # print parameters
     for name, param in model.named_parameters():
@@ -171,7 +171,6 @@ def main():
         else:
             def make_inputs_require_grad(module, input, output):
                 output.requires_grad_(True)
-
             model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
 
     # init deepspeed
@@ -185,9 +184,11 @@ def main():
         print_rank_0("Beginning of Epoch {}/{}, Total Micro Batches {}".format(epoch + 1, args.num_train_epochs,
                                                                                len(train_dataloader)), args.global_rank)
         model.train()
-        for step, batch in tqdm(enumerate(train_dataloader), total=len(train_dataloader), unit="batch"):
+        train_iterator = tqdm(train_dataloader, bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}',
+                              unit='batch', ncols=120)
+        for step, batch in enumerate(train_iterator):
             batch = to_device(batch, device)
-            print(batch["input_ids"].shape)
+            #print(batch["input_ids"].shape)
             outputs = model(**batch, use_cache=False)
             loss = outputs.loss
             tr_loss += loss.item()
@@ -198,13 +199,12 @@ def main():
                 global_step += 1
                 # write loss
                 if global_step % args.show_loss_step == 0:
-                    print_rank_0("Epoch: {}, step: {}, global_step:{}, loss: {}".format(epoch, step + 1, global_step,
-                                                                                        (tr_loss - logging_loss) /
-                                                                                        (
-                                                                                                args.show_loss_step * args.gradient_accumulation_steps)
-                                                                                        ),
-                                 args.global_rank)
-                    print_rank_0("step: {}-{}-{}".format(step + 1, global_step, model.global_steps), args.global_rank)
+                    train_iterator.set_description(
+                        "Epoch: {}, step: {}, global_step:{}, loss: {}".format(epoch, step + 1, global_step,
+                                                                               (tr_loss - logging_loss) /
+                                                                               (
+                                                                                       args.show_loss_step * args.gradient_accumulation_steps)
+                                                                               ))
                     if args.global_rank <= 0:
                         tb_write.add_scalar("train_loss", (tr_loss - logging_loss) /
                                             (args.show_loss_step * args.gradient_accumulation_steps), global_step)
@@ -228,8 +228,16 @@ def main():
                 save_model(model, tokenizer, args.output_dir, f"epoch-{epoch + 1}-step-{global_step}", state_dict)
         else:
             if args.global_rank <= 0:
-                save_model(model, tokenizer, args.output_dir, f"epoch-{epoch + 1}-step-{global_step}")
+                print("Saving PrefixEncoder")
+                state_dict = model.state_dict()
+                filtered_state_dict = {}
+                for k, v in model.named_parameters():
+                    if v.requires_grad:
+                        filtered_state_dict[k] = state_dict[k]
+                #save_model(model, tokenizer, args.output_dir, f"epoch-{epoch + 1}-step-{global_step}")
+                save_model(model, tokenizer, args.output_dir, f"epoch-{epoch + 1}-step-{global_step}",filtered_state_dict)
 
 
 if __name__ == "__main__":
     main()
+
