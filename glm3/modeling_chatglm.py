@@ -96,13 +96,11 @@ def split_tensor_along_last_dim(
         contiguous_split_chunks: bool = False,
 ) -> List[torch.Tensor]:
     """Split a tensor along its last dimension.
-
     Arguments:
         tensor: input tensor.
         num_partitions: number of partitions to split the tensor
         contiguous_split_chunks: If True, make each chunk contiguous
                                  in memory.
-
     Returns:
         A list of Tensors
     """
@@ -130,7 +128,6 @@ class RotaryEmbedding(nn.Module):
             self, seq_len: int, n_elem: int, dtype: torch.dtype, device: torch.device, base: int = 10000
     ):
         """Enhanced Transformer with Rotary Position Embedding.
-
         Derived from: https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/labml_nn/
         transformers/rope/__init__.py. MIT License:
         https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/license.
@@ -312,7 +309,6 @@ class CoreAttention(torch.nn.Module):
 
 class SelfAttention(torch.nn.Module):
     """Parallel self-attention layer abstract class.
-
     Self-attention layer takes input with size [s, b, h]
     and returns output of the same size.
     """
@@ -458,7 +454,6 @@ def _config_to_kwargs(args):
 
 class MLP(torch.nn.Module):
     """MLP.
-
     MLP will take the input with h hidden state, project it to 4*h
     hidden dimension, perform nonlinear transformation, and project the
     state back into h hidden dimension.
@@ -504,7 +499,6 @@ class MLP(torch.nn.Module):
 
 class GLMBlock(torch.nn.Module):
     """A single transformer layer.
-
     Transformer layer takes input with size [s, b, h] and returns an
     output of the same size.
     """
@@ -985,7 +979,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         This function is used to re-order the `past_key_values` cache if [`~PreTrainedModel.beam_search`] or
         [`~PreTrainedModel.beam_sample`] is called. This is required to match `past_key_values` with the correct
         beam_idx at every generation step.
-
         Output shares the same memory storage as `past`.
         """
         return tuple(
@@ -1000,7 +993,10 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         content = ""
         history = deepcopy(history)
         for response in output.split("<|assistant|>"):
-            metadata, content = response.split("\n", maxsplit=1)
+            if "\n" in response:
+                metadata, content = response.split("\n", maxsplit=1)
+            else:
+                metadata, content = "", response
             if not metadata.strip():
                 content = content.strip()
                 history.append({"role": "assistant", "metadata": metadata, "content": content})
@@ -1029,7 +1025,6 @@ class ChatGLMForConditionalGeneration(ChatGLMPreTrainedModel):
         gen_kwargs = {"max_length": max_length, "num_beams": num_beams, "do_sample": do_sample, "top_p": top_p,
                       "temperature": temperature, "logits_processor": logits_processor, **kwargs}
         inputs = tokenizer.build_chat_input(query, history=history, role=role)
-
         inputs = inputs.to(self.device)
         eos_token_id = [tokenizer.eos_token_id, tokenizer.get_command("<|user|>"),
                         tokenizer.get_command("<|observation|>")]

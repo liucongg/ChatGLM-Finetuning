@@ -1,6 +1,6 @@
 import json
 import os
-import torch
+import re
 from typing import List, Optional, Union, Dict
 from sentencepiece import SentencePieceProcessor
 from transformers import PreTrainedTokenizer
@@ -21,17 +21,30 @@ class SPTokenizer:
         self.pad_id: int = self.sp_model.unk_id()
         assert self.sp_model.vocab_size() == self.sp_model.get_piece_size()
 
-        special_tokens = ["[MASK]", "[gMASK]", "[sMASK]", "sop", "eop", "<|system|>", "<|user|>", "<|assistant|>",
-                          "<|observation|>"]
+        role_special_tokens = ["<|system|>", "<|user|>", "<|assistant|>", "<|observation|>"]
+        special_tokens = ["[MASK]", "[gMASK]", "[sMASK]", "sop", "eop"] + role_special_tokens
         self.special_tokens = {}
         self.index_special_tokens = {}
         for token in special_tokens:
             self.special_tokens[token] = self.n_words
             self.index_special_tokens[self.n_words] = token
             self.n_words += 1
+        self.role_special_token_expression = "|".join([re.escape(token) for token in role_special_tokens])
 
-    def tokenize(self, s: str):
-        return self.sp_model.EncodeAsPieces(s)
+    def tokenize(self, s: str, encode_special_tokens=False):
+        if encode_special_tokens:
+            last_index = 0
+            t = []
+            for match in re.finditer(self.role_special_token_expression, s):
+                if last_index < match.start():
+                    t.extend(self.sp_model.EncodeAsPieces(s[last_index:match.start()]))
+                t.append(s[match.start():match.end()])
+                last_index = match.end()
+            if last_index < len(s):
+                t.extend(self.sp_model.EncodeAsPieces(s[last_index:]))
+            return t
+        else:
+            return self.sp_model.EncodeAsPieces(s)
 
     def encode(self, s: str, bos: bool = False, eos: bool = False) -> List[int]:
         assert type(s) is str
@@ -70,7 +83,7 @@ class SPTokenizer:
         """Converts an index (integer) in a token (str) using the vocab."""
         if index in self.index_special_tokens:
             return self.index_special_tokens[index]
-        if index in [self.eos_id, self.bos_id, self.pad_id] or index < 0:
+        if index in [self.eos_id, self.bos_id, self.pad_id] or index < 0 or index > self.sp_model.vocab_size():
             return ""
         return self.sp_model.IdToPiece(index)
 
@@ -80,7 +93,8 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
 
     model_input_names = ["input_ids", "attention_mask", "position_ids"]
 
-    def __init__(self, vocab_file, padding_side="left", clean_up_tokenization_spaces=False, **kwargs):
+    def __init__(self, vocab_file, padding_side="left", clean_up_tokenization_spaces=False, encode_special_tokens=False,
+                 **kwargs):
         self.name = "GLMTokenizer"
 
         self.vocab_file = vocab_file
@@ -90,7 +104,10 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
             "<eos>": self.tokenizer.eos_id,
             "<pad>": self.tokenizer.pad_id
         }
-        super().__init__(padding_side=padding_side, clean_up_tokenization_spaces=clean_up_tokenization_spaces, **kwargs)
+        self.encode_special_tokens = encode_special_tokens
+        super().__init__(padding_side=padding_side, clean_up_tokenization_spaces=clean_up_tokenization_spaces,
+                         encode_special_tokens=encode_special_tokens,
+                         **kwargs)
 
     def get_command(self, token):
         if token in self.special_tokens:
@@ -129,7 +146,7 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
         return vocab
 
     def _tokenize(self, text, **kwargs):
-        return self.tokenizer.tokenize(text)
+        return self.tokenizer.tokenize(text, encode_special_tokens=self.encode_special_tokens)
 
     def _convert_token_to_id(self, token):
         """ Converts a token (str) in an id using the vocab. """
@@ -145,13 +162,11 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
     def save_vocabulary(self, save_directory, filename_prefix=None):
         """
         Save the vocabulary and special tokens file to a directory.
-
         Args:
             save_directory (`str`):
                 The directory in which to save the vocabulary.
             filename_prefix (`str`, *optional*):
                 An optional prefix to add to the named of the saved files.
-
         Returns:
             `Tuple(str)`: Paths to the files saved.
         """
@@ -200,16 +215,13 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
         """
         Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
-
         - single sequence: `[CLS] X [SEP]`
         - pair of sequences: `[CLS] A [SEP] B [SEP]`
-
         Args:
             token_ids_0 (`List[int]`):
                 List of IDs to which the special tokens will be added.
             token_ids_1 (`List[int]`, *optional*):
                 Optional second list of IDs for sequence pairs.
-
         Returns:
             `List[int]`: List of [input IDs](../glossary#input-ids) with the appropriate special tokens.
         """
@@ -229,19 +241,16 @@ class ChatGLMTokenizer(PreTrainedTokenizer):
     ) -> dict:
         """
         Pad encoded inputs (on left/right and up to predefined length or max length in the batch)
-
         Args:
             encoded_inputs:
                 Dictionary of tokenized inputs (`List[int]`) or batch of tokenized inputs (`List[List[int]]`).
             max_length: maximum length of the returned list and optionally padding length (see below).
                 Will truncate by taking into account the special tokens.
             padding_strategy: PaddingStrategy to use for padding.
-
                 - PaddingStrategy.LONGEST Pad to the longest sequence in the batch
                 - PaddingStrategy.MAX_LENGTH: Pad to the max length (default)
                 - PaddingStrategy.DO_NOT_PAD: Do not pad
                 The tokenizer padding sides are defined in self.padding_side:
-
                     - 'left': pads on the left of the sequences
                     - 'right': pads on the right of the sequences
             pad_to_multiple_of: (optional) Integer if set will pad the sequence to a multiple of the provided value.
