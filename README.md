@@ -538,7 +538,7 @@ PS：ChatGLM微调时所用显存要比ChatGLM2多，详细显存占比如下：
 | ChaGLM2 | zero2 | No | Yes | 1 | 1560  | 4 | 19G |
 | ChaGLM2 | zero2 | No | No | 1 | 1560  | 4 | 42G |
 
-注意：Lora方法在模型保存时仅保存了Lora训练参数，因此在模型预测时需要将模型参数进行合并，具体参考merge_lora.py。
+注意：Lora方法在模型保存时仅保存了Lora训练参数，因此在模型预测时需要将模型参数进行合并，具体参考[merge_lora.py](./merge_lora.py)。
 
 ### 全参方法
 全参方法，对大模型进行全量参数训练，主要借助DeepSpeed-Zero3方法，对模型参数进行多卡分割，并借助Offload方法，将优化器参数卸载到CPU上以解决显卡不足问题。
