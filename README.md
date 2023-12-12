@@ -1,14 +1,15 @@
 
 ## ChatGLM微调
-本项目主要针对ChatGLM和ChatGLM2模型进行不同方式的微调（Freeze方法、Lora方法、P-Tuning方法、全量参数等），并对比大模型在不同微调方法上的效果，主要针对信息抽取任务、生成任务、分类任务等。
+本项目主要针对ChatGLM、ChatGLM2和ChatGLM3模型进行不同方式的微调（Freeze方法、Lora方法、P-Tuning方法、全量参数等），并对比大模型在不同微调方法上的效果，主要针对信息抽取任务、生成任务、分类任务等。
 
 本项目支持单卡训练&多卡训练，由于采用单指令集方式微调，模型微调之后**并没有出现严重的灾难性遗忘**。
 
-由于官方代码和模型一直在更新，目前代码和模型使用的是最新版本（20230806）。
+由于官方代码和模型一直在更新，目前代码和模型使用的是最新版本（20231212）。
 
 PS：没有用Trainer（虽然Trainer代码简单，但不易修改，大模型时代算法工程师本就成为了数据工程师，因此更需了解训练流程）
 
 ## 更新简介
+- update-2023.12.12 增加ChatGLM3代码支持，通过model_type完成模型切换，并增加推理代码。
 - update-2023.08.06 代码和模型已经更新到最新，支持单卡&多卡训练，支持ChatGLM2模型训练、支持全量参数训练，所有代码进行了结构增加可读性。
 - update-2023.06.12 [**增加流水线并行训练方法**](https://zhuanlan.zhihu.com/p/636488690)，请看[v0.1 Tag](https://github.com/liucongg/ChatGLM-Finetuning/tree/v0.1)
 - update-2023.04.18 **增加文本生成任务评测**，请看[v0.1 Tag](https://github.com/liucongg/ChatGLM-Finetuning/tree/v0.1)
@@ -118,6 +119,50 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
                 --gradient_checkpointing \
                 --show_loss_step 10 \
                 --output_dir ./output-glm2
+```
+ChatGLM3单卡训练
+```
+CUDA_VISIBLE_DEVICES=0 deepspeed --master_port 520 train.py \
+                --train_path data/spo_0.json \
+                --model_name_or_path ChatGLM3-6B/ \
+                --per_device_train_batch_size 1 \
+                --max_len 1560 \
+                --max_src_len 1024 \
+                --learning_rate 1e-4 \
+                --weight_decay 0.1 \
+                --num_train_epochs 2 \
+                --gradient_accumulation_steps 4 \
+                --warmup_ratio 0.1 \
+                --mode glm3 \
+                --train_type freeze \
+                --freeze_module_name "layers.27.,layers.26.,layers.25.,layers.24." \
+                --seed 1234 \
+                --ds_file ds_zero2_no_offload.json \
+                --gradient_checkpointing \
+                --show_loss_step 10 \
+                --output_dir ./output-glm3
+```
+ChatGLM3四卡训练，通过CUDA_VISIBLE_DEVICES控制具体哪几块卡进行训练，如果不加该参数，表示使用运行机器上所有卡进行训练
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
+                --train_path data/spo_0.json \
+                --model_name_or_path ChatGLM3-6B/ \
+                --per_device_train_batch_size 1 \
+                --max_len 1560 \
+                --max_src_len 1024 \
+                --learning_rate 1e-4 \
+                --weight_decay 0.1 \
+                --num_train_epochs 2 \
+                --gradient_accumulation_steps 4 \
+                --warmup_ratio 0.1 \
+                --mode glm3 \
+                --train_type freeze \
+                --freeze_module_name "layers.27.,layers.26.,layers.25.,layers.24." \
+                --seed 1234 \
+                --ds_file ds_zero2_no_offload.json \
+                --gradient_checkpointing \
+                --show_loss_step 10 \
+                --output_dir ./output-glm3
 ```
 PS：ChatGLM微调时所用显存要比ChatGLM2多，详细显存占比如下：
 
@@ -245,6 +290,52 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
                 --pre_seq_len 16 \
                 --prefix_projection True \
                 --output_dir ./output-glm2
+```
+ChatGLM3单卡训练
+```
+CUDA_VISIBLE_DEVICES=0 deepspeed --master_port 520 train.py \
+                --train_path data/spo_0.json \
+                --model_name_or_path ChatGLM3-6B/ \
+                --per_device_train_batch_size 1 \
+                --max_len 1560 \
+                --max_src_len 1024 \
+                --learning_rate 1e-4 \
+                --weight_decay 0.1 \
+                --num_train_epochs 2 \
+                --gradient_accumulation_steps 4 \
+                --warmup_ratio 0.1 \
+                --mode glm3 \
+                --train_type ptuning \
+                --seed 1234 \
+                --ds_file ds_zero2_no_offload.json \
+                --gradient_checkpointing \
+                --show_loss_step 10 \
+                --pre_seq_len 16 \
+                --prefix_projection True \
+                --output_dir ./output-glm3
+```
+ChatGLM3四卡训练，通过CUDA_VISIBLE_DEVICES控制具体哪几块卡进行训练，如果不加该参数，表示使用运行机器上所有卡进行训练
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
+                --train_path data/spo_0.json \
+                --model_name_or_path ChatGLM3-6B/ \
+                --per_device_train_batch_size 1 \
+                --max_len 1560 \
+                --max_src_len 1024 \
+                --learning_rate 1e-4 \
+                --weight_decay 0.1 \
+                --num_train_epochs 2 \
+                --gradient_accumulation_steps 4 \
+                --warmup_ratio 0.1 \
+                --mode glm3 \
+                --train_type ptuning \
+                --seed 1234 \
+                --ds_file ds_zero2_no_offload.json \
+                --gradient_checkpointing \
+                --show_loss_step 10 \
+                --pre_seq_len 16 \
+                --prefix_projection True \
+                --output_dir ./output-glm3
 ```
 PS：ChatGLM微调时所用显存要比ChatGLM2多，详细显存占比如下：
 
@@ -386,6 +477,54 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
               --show_loss_step 10 \
               --output_dir ./output-glm2
 ```
+ChatGLM3单卡训练
+```
+CUDA_VISIBLE_DEVICES=0 deepspeed --master_port 520 train.py \
+                --train_path data/spo_0.json \
+                --model_name_or_path ChatGLM3-6B/ \
+                --per_device_train_batch_size 1 \
+                --max_len 1560 \
+                --max_src_len 1024 \
+                --learning_rate 1e-4 \
+                --weight_decay 0.1 \
+                --num_train_epochs 2 \
+                --gradient_accumulation_steps 4 \
+                --warmup_ratio 0.1 \
+                --mode glm3 \
+                --lora_dim 16 \
+                --lora_alpha 64 \
+                --lora_dropout 0.1 \
+                --lora_module_name "query_key_value,dense_h_to_4h,dense_4h_to_h,dense" \
+                --seed 1234 \
+                --ds_file ds_zero2_no_offload.json \
+                --gradient_checkpointing \
+                --show_loss_step 10 \
+                --output_dir ./output-glm3
+```
+ChatGLM3四卡训练，通过CUDA_VISIBLE_DEVICES控制具体哪几块卡进行训练，如果不加该参数，表示使用运行机器上所有卡进行训练
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
+                --train_path data/spo_0.json \
+                --model_name_or_path ChatGLM3-6B/ \
+                --per_device_train_batch_size 1 \
+                --max_len 1560 \
+                --max_src_len 1024 \
+                --learning_rate 1e-4 \
+                --weight_decay 0.1 \
+                --num_train_epochs 2 \
+                --gradient_accumulation_steps 4 \
+                --warmup_ratio 0.1 \
+                --mode glm3 \
+                --lora_dim 16 \
+                --lora_alpha 64 \
+                --lora_dropout 0.1 \
+                --lora_module_name "query_key_value,dense_h_to_4h,dense_4h_to_h,dense" \
+                --seed 1234 \
+                --ds_file ds_zero2_no_offload.json \
+                --gradient_checkpointing \
+                --show_loss_step 10 \
+                --output_dir ./output-glm3
+```
 PS：ChatGLM微调时所用显存要比ChatGLM2多，详细显存占比如下：
 
 | Model |  DeepSpeed-Stage |  Offload | Gradient Checkpointing |  Batch Size | Max Length | GPU-A40 Number | 所耗显存 |
@@ -451,6 +590,27 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
               --gradient_checkpointing \
               --show_loss_step 10 \
               --output_dir ./output-glm2
+```
+ChatGLM3四卡训练，通过CUDA_VISIBLE_DEVICES控制具体哪几块卡进行训练，如果不加该参数，表示使用运行机器上所有卡进行训练
+```
+CCUDA_VISIBLE_DEVICES=0,1,2,3 deepspeed --master_port 520 train.py \
+              --train_path data/spo_0.json \
+              --model_name_or_path ChatGLM3-6B \
+              --per_device_train_batch_size 1 \
+              --max_len 1560 \
+              --max_src_len 1024 \
+              --learning_rate 1e-4 \
+              --weight_decay 0.1 \
+              --num_train_epochs 2 \
+              --gradient_accumulation_steps 4 \
+              --warmup_ratio 0.1 \
+              --mode glm3 \
+              --train_type all \
+              --seed 1234 \
+              --ds_file ds_zero3_no_offload.json \
+              --gradient_checkpointing \
+              --show_loss_step 10 \
+              --output_dir ./output-glm3
 ```
 PS：ChatGLM微调时所用显存要比ChatGLM2多，详细显存占比如下：
 

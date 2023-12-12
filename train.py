@@ -187,7 +187,6 @@ def main():
         model.train()
         for step, batch in tqdm(enumerate(train_dataloader), total=len(train_dataloader), unit="batch"):
             batch = to_device(batch, device)
-            print(batch["input_ids"].shape)
             outputs = model(**batch, use_cache=False)
             loss = outputs.loss
             tr_loss += loss.item()
