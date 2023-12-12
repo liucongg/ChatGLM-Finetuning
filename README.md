@@ -375,6 +375,8 @@ config = LoraConfig(r=args.lora_dim,
 model = get_peft_model(model, config)
 model.config.torch_dtype = torch.float32
 ```
+PS: Lora训练之后，请先参数合并，在进行模型预测。
+
 训练代码均采用DeepSpeed进行训练，可设置参数包含train_path、model_name_or_path、mode、train_type、lora_dim、lora_alpha、lora_dropout、lora_module_name、ds_file、num_train_epochs、per_device_train_batch_size、gradient_accumulation_steps、output_dir等， 可根据自己的任务配置。
 
 ChatGLM单卡训练
